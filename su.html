@@ -1,0 +1,634 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>北港高中學生會 | PKSH 數位平台</title>
+    <!-- 載入 Tailwind CSS CDN -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- 載入 Lucide Icons CDN -->
+    <script src="https://unpkg.com/lucide@latest"></script>
+    <!-- 建議字體設定 (使用系統字體，確保繁體中文顯示正確) -->
+    <style>
+        :root {
+            --phsa-red: #E63946;
+            --phsa-blue: #457B9D;
+            font-family: 'Noto Sans TC', 'Inter', system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, "Noto Sans", sans-serif;
+        }
+        .bg-phsa-red { background-color: var(--phsa-red); }
+        .text-phsa-red { color: var(--phsa-red); }
+        .border-phsa-red { border-color: var(--phsa-red); }
+        /* 自定義卡片陰影 */
+        .card-shadow { box-shadow: 0 4px 6px rgba(0, 0, 0, 0.05), 0 1px 3px rgba(0, 0, 0, 0.1); }
+        /* 跑馬燈效果 */
+        .marquee-container { overflow: hidden; white-space: nowrap; }
+        .marquee-content { display: inline-block; animation: marquee 15s linear infinite; }
+        @keyframes marquee {
+            0% { transform: translateX(100%); }
+            100% { transform: translateX(-100%); }
+        }
+        /* 申訴狀態條樣式 */
+        .status-step.active .status-dot { background-color: var(--phsa-red); }
+        .status-step.active .status-text { font-weight: 600; color: #1f2937; }
+    </style>
+</head>
+<body class="bg-gray-50 text-gray-800">
+
+    <!-- 頂部跑馬燈 Banner -->
+    <div class="bg-gray-900 text-white text-sm py-2 px-4 marquee-container">
+        <div class="marquee-content flex space-x-8">
+            <span id="ticker-content" class="flex-shrink-0">
+                最新消息：🏀 籃球賽報名截止倒數 3 天！請儘速提交 | 🎵 午餐點歌審核通過數：12 首 | 📢 權益申訴案件 #C005 已結案！
+            </span>
+            <span class="flex-shrink-0">
+                最新消息：🏀 籃球賽報名截止倒數 3 天！請儘速提交 | 🎵 午餐點歌審核通過數：12 首 | 📢 權益申訴案件 #C005 已結案！
+            </span>
+        </div>
+    </div>
+
+    <!-- Header & 導覽列 -->
+    <header class="sticky top-0 z-10 bg-white shadow-md">
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+            <div class="flex justify-between items-center h-16">
+                <!-- Logo/Title -->
+                <a href="#" class="flex-shrink-0 flex items-center" onclick="navigate('home')">
+                    <span class="text-2xl font-bold text-phsa-red">PHSA</span>
+                    <span class="ml-2 text-gray-900 hidden sm:inline">北港高中學生會</span>
+                </a>
+
+                <!-- 導覽選單 (Desktop) -->
+                <nav class="hidden md:flex space-x-6">
+                    <button class="text-gray-600 hover:text-phsa-red transition-colors" onclick="navigate('home')">首頁</button>
+                    <button class="text-gray-600 hover:text-phsa-red transition-colors" onclick="navigate('complaint')">申訴信箱</button>
+                    <button class="text-gray-600 hover:text-phsa-red transition-colors" onclick="navigate('clubs')">社團專區</button>
+                    <a href="#admin" class="text-gray-600 hover:text-phsa-red transition-colors" onclick="navigate('admin')">幹部登入</a>
+                    <!-- TODO: API 替換點 - 社群連結 -->
+                    <a href="https://www.instagram.com/pksh" target="_blank" class="text-gray-600 hover:text-phsa-red transition-colors">
+                        <i data-lucide="instagram" class="w-5 h-5"></i>
+                    </a>
+                </nav>
+
+                <!-- 漢堡選單 (Mobile) -->
+                <button id="menu-button" class="md:hidden text-gray-600 hover:text-phsa-red">
+                    <i data-lucide="menu" class="w-6 h-6"></i>
+                </button>
+            </div>
+        </div>
+        
+        <!-- Mobile Menu 展開內容 -->
+        <div id="mobile-menu" class="md:hidden hidden bg-white border-t border-gray-100">
+            <div class="px-4 pt-2 pb-4 space-y-1 sm:px-6">
+                <button class="block w-full text-left py-2 px-3 rounded-md text-base font-medium text-gray-700 hover:bg-gray-50" onclick="navigate('home')">首頁</button>
+                <button class="block w-full text-left py-2 px-3 rounded-md text-base font-medium text-gray-700 hover:bg-gray-50" onclick="navigate('complaint')">申訴信箱</button>
+                <button class="block w-full text-left py-2 px-3 rounded-md text-base font-medium text-gray-700 hover:bg-gray-50" onclick="navigate('clubs')">社團專區</button>
+                <a href="#admin" class="block py-2 px-3 rounded-md text-base font-medium bg-phsa-red text-white hover:bg-red-700 transition-colors" onclick="navigate('admin')">幹部登入</a>
+            </div>
+        </div>
+    </header>
+
+    <!-- 主內容區塊 -->
+    <main class="max-w-7xl mx-auto p-4 sm:p-6 lg:p-8" id="app-container">
+        <!-- 內容將由 JavaScript 動態插入 -->
+    </main>
+
+    <!-- 網站 Footer -->
+    <footer class="bg-gray-100 mt-12 py-8">
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 text-center text-sm text-gray-600">
+            <p>© 2025 國立北港高中學生會 (PHSA). All Rights Reserved.</p>
+            <p>本網站由學生會資訊組維護，建議使用 Chrome/Safari 瀏覽器。</p>
+        </div>
+    </footer>
+
+    <script>
+        // --- 核心資料與狀態 ---
+
+        const APP_STATE = {
+            view: 'home',
+            trackingId: null,
+            mockData: {
+                announcements: [
+                    { id: 1, title: '校慶園遊會攤位招募！', tag: '活動', date: '2025-11-20', content: '一年一度的校慶園遊會即將登場，快來申請攤位！' },
+                    { id: 2, title: '新版校規意見收集', tag: '權益', date: '2025-11-15', content: '教務處將修訂校規，請學生代表踴躍提供意見。' },
+                    { id: 3, title: '高二社團成果展時間公告', tag: '社團', date: '2025-11-10', content: '請各社團留意時間，開始準備展示內容。' },
+                    { id: 4, title: '學生會 11 月份會議記錄公開', tag: '會議', date: '2025-11-05', content: '欲知詳情，請登入後台查閱檔案。' },
+                ],
+                clubs: [
+                    { id: 'C01', name: '吉他社', category: '藝文', desc: '用音樂感動世界，社課時間：週三下午。', leader: '陳小明', imageUrl: 'https://placehold.co/400x250/E63946/FFFFFF?text=Guitar' },
+                    { id: 'C02', name: '籃球社', category: '運動', desc: '熱血沸騰，鬥牛賽等你來戰！', leader: '林大華', imageUrl: 'https://placehold.co/400x250/457B9D/FFFFFF?text=Basketball' },
+                    { id: 'C03', name: '綠色大地服務隊', category: '服務', desc: '為校園環境盡一份心力。', leader: '王美惠', imageUrl: 'https://placehold.co/400x250/A8DADC/FFFFFF?text=Service' },
+                ],
+                // TODO: API 替換點 - 社團活動申請清單
+                clubApplications: [
+                    { id: 'A001', club: '熱舞社', activity: '年度公演', status: '已收件', date: '2025-11-25' },
+                    { id: 'A002', club: '攝影社', activity: '期末作品展', status: '財務審核中', date: '2025-11-24' },
+                ],
+                // TODO: API 替換點 - 申訴案件清單
+                complaints: {
+                    'C001': { status: '已結案', category: '設備', content: '宿舍飲水機故障。', adminReply: '總務處已派員維修並更換濾心，請同學再次確認。' },
+                    'C002': { status: '處理中', category: '教務', content: '英文課本內容太難，希望調整。', adminReply: '已轉交教務處課研組，請代表持續追蹤。' },
+                    'C003': { status: '已收到', category: '生活', content: '合作社麵包常常賣光。' },
+                },
+                // TODO: API 替換點 - 告白牆清單
+                confessions: [
+                    { id: 1, message: '致 G201 的那位，你笑起來像太陽！☀️', nick: '匿名學生 A', status: 'approved' },
+                    { id: 2, message: '感謝學生會讓籃球架修好了！', nick: '籃球狂熱者', status: 'approved' }
+                ]
+            }
+        };
+
+        // --- View 渲染函數 ---
+
+        const appContainer = document.getElementById('app-container');
+
+        // 1. Home 頁面渲染
+        function renderHome() {
+            const newsHtml = APP_STATE.mockData.announcements.map(item => `
+                <div class="bg-white p-5 rounded-xl card-shadow transition-transform hover:scale-[1.01]">
+                    <span class="inline-block px-3 py-1 text-xs font-semibold rounded-full ${item.tag === '活動' ? 'bg-phsa-red text-white' : item.tag === '權益' ? 'bg-phsa-blue text-white' : 'bg-gray-200 text-gray-700'}">${item.tag}</span>
+                    <h3 class="text-xl font-bold mt-2 text-gray-900">${item.title}</h3>
+                    <p class="text-sm text-gray-500 mt-1">${item.date}</p>
+                    <!-- TODO: API 替換點 - 公告詳細內容連結 -->
+                    <a href="#" class="mt-3 text-phsa-red font-semibold flex items-center hover:underline" onclick="event.preventDefault(); alert('點擊查看詳細內容 (模擬)');">
+                        閱讀詳情 <i data-lucide="arrow-right" class="w-4 h-4 ml-1"></i>
+                    </a>
+                </div>
+            `).join('');
+
+            const confession = APP_STATE.mockData.confessions.find(c => c.status === 'approved') || { message: '暫無最新告白', nick: '系統' };
+
+            appContainer.innerHTML = `
+                <!-- Hero Banner -->
+                <div class="bg-phsa-red text-white rounded-2xl p-6 lg:p-12 mb-10 card-shadow">
+                    <h1 class="text-4xl lg:text-5xl font-extrabold mb-4">北港高中學生自治</h1>
+                    <p class="text-lg lg:text-xl opacity-90">你的聲音，我們的行動。共創更美好的校園生活。</p>
+                    <button class="mt-6 bg-white text-phsa-red font-bold py-3 px-6 rounded-full hover:bg-gray-100 transition-colors" onclick="navigate('complaint')">
+                        立即申訴/建議
+                    </button>
+                </div>
+
+                <!-- 快速連結 (Quick Links) -->
+                <section class="mb-12">
+                    <h2 class="text-2xl font-bold mb-4 text-gray-900">快速行動</h2>
+                    <div class="grid grid-cols-2 md:grid-cols-4 gap-4">
+                        <button class="p-6 bg-white rounded-xl card-shadow border-t-4 border-phsa-red text-center hover:bg-gray-50 transition-colors" onclick="navigate('complaint')">
+                            <i data-lucide="shield-question" class="w-8 h-8 mx-auto text-phsa-red mb-2"></i>
+                            <span class="font-semibold text-gray-900">權益申訴</span>
+                        </button>
+                        <a href="#register" class="p-6 bg-white rounded-xl card-shadow border-t-4 border-phsa-blue text-center hover:bg-gray-50 transition-colors" onclick="event.preventDefault(); alert('TODO: 接入報名系統 API');">
+                            <i data-lucide="ticket" class="w-8 h-8 mx-auto text-phsa-blue mb-2"></i>
+                            <span class="font-semibold text-gray-900">活動報名</span>
+                        </a>
+                        <button class="p-6 bg-white rounded-xl card-shadow border-t-4 border-gray-400 text-center hover:bg-gray-50 transition-colors" onclick="navigate('clubs')">
+                            <i data-lucide="users" class="w-8 h-8 mx-auto text-gray-600 mb-2"></i>
+                            <span class="font-semibold text-gray-900">社團查詢</span>
+                        </button>
+                        <a href="#downloads" class="p-6 bg-white rounded-xl card-shadow border-t-4 border-gray-400 text-center hover:bg-gray-50 transition-colors" onclick="event.preventDefault(); alert('TODO: 檔案下載中心');">
+                            <i data-lucide="download" class="w-8 h-8 mx-auto text-gray-600 mb-2"></i>
+                            <span class="font-semibold text-gray-900">檔案下載</span>
+                        </a>
+                    </div>
+                </section>
+
+                <!-- 公告與告白牆 -->
+                <section class="grid grid-cols-1 lg:grid-cols-3 gap-8">
+                    <div class="lg:col-span-2">
+                        <h2 class="text-2xl font-bold mb-4 text-gray-900">最新公告</h2>
+                        <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                            ${newsHtml}
+                        </div>
+                        <!-- TODO: API 替換點 - 更多公告連結 -->
+                        <div class="text-center mt-6">
+                             <a href="#" class="text-phsa-red font-semibold hover:underline">查看更多公告...</a>
+                        </div>
+                    </div>
+
+                    <!-- 匿名告白牆 (側邊欄/卡片) -->
+                    <div class="bg-white p-6 rounded-xl card-shadow h-fit">
+                        <div class="flex items-center justify-between mb-4">
+                            <h2 class="text-xl font-bold text-phsa-red flex items-center">
+                                <i data-lucide="heart" class="w-5 h-5 mr-2 fill-phsa-red"></i> 匿名告白牆
+                            </h2>
+                            <a href="#" class="text-sm text-gray-500 hover:text-phsa-red" onclick="event.preventDefault(); alert('TODO: 提交告白表單');">提交告白</a>
+                        </div>
+                        <div class="text-gray-700 italic border-l-4 border-phsa-blue pl-4 py-2 bg-gray-50 rounded-md">
+                            <p class="text-lg">${confession.message}</p>
+                            <p class="text-right text-sm mt-2">- ${confession.nick}</p>
+                        </div>
+                    </div>
+                </section>
+            `;
+            lucide.createIcons(); // 重新渲染 Lucide 圖標
+        }
+
+        // 2. 申訴信箱頁面渲染
+        function renderComplaint() {
+            appContainer.innerHTML = `
+                <div class="max-w-4xl mx-auto bg-white p-6 md:p-10 rounded-xl card-shadow">
+                    <h1 class="text-3xl font-bold mb-6 text-phsa-red">權益申訴/建議信箱</h1>
+
+                    <!-- 導航 Tab: 申訴提交 / 狀態追蹤 -->
+                    <div class="flex border-b mb-6">
+                        <button id="tab-submit" class="tab-button py-2 px-4 text-lg font-medium border-b-2 border-phsa-red text-phsa-red transition-colors" onclick="showComplaintSection('submit')">提交申訴</button>
+                        <button id="tab-track" class="tab-button py-2 px-4 text-lg font-medium border-b-2 border-transparent text-gray-500 hover:text-phsa-red transition-colors" onclick="showComplaintSection('track')">進度追蹤</button>
+                    </div>
+
+                    <!-- 申訴提交區塊 -->
+                    <div id="complaint-submit-section">
+                        <form id="complaint-form" onsubmit="handleComplaintSubmit(event)">
+                            <p class="mb-4 text-gray-600 flex items-center">
+                                <i data-lucide="alert-triangle" class="w-5 h-5 mr-2 text-yellow-500"></i>
+                                本系統完全匿名，請勿在內容中填寫個人資料。系統將提供追蹤碼供您查詢進度。
+                            </p>
+                            <div class="mb-4">
+                                <label for="category" class="block text-sm font-medium text-gray-700 mb-1">申訴類別 (必選)</label>
+                                <select id="category" name="category" required class="w-full p-3 border border-gray-300 rounded-lg focus:ring-phsa-red focus:border-phsa-red">
+                                    <option value="">請選擇...</option>
+                                    <option value="equipment">設備設施 (如飲水機、廁所)</option>
+                                    <option value="curriculum">教務相關 (如課表、考試)</option>
+                                    <option value="rights">學生權益 (如校規、服儀)</option>
+                                    <option value="life">生活相關 (如午餐、合作社)</option>
+                                    <option value="other">其他</option>
+                                </select>
+                            </div>
+                            <div class="mb-6">
+                                <label for="content" class="block text-sm font-medium text-gray-700 mb-1">申訴內容 (必填)</label>
+                                <textarea id="content" name="content" rows="6" required placeholder="請詳細描述問題發生的時間、地點及影響..." class="w-full p-3 border border-gray-300 rounded-lg focus:ring-phsa-red focus:border-phsa-red"></textarea>
+                                <p class="text-xs text-gray-500 mt-1">內容需大於 20 字，小於 1000 字。</p>
+                            </div>
+                            <button type="submit" class="w-full bg-phsa-red text-white font-semibold py-3 rounded-lg hover:bg-red-700 transition-colors">
+                                提交申訴
+                            </button>
+                        </form>
+                    </div>
+
+                    <!-- 狀態追蹤區塊 -->
+                    <div id="complaint-track-section" class="hidden">
+                        <div id="tracking-info" class="mb-6 bg-gray-50 p-4 rounded-lg text-gray-700">
+                             請輸入您的追蹤 ID 查詢申訴進度，**本系統無需 PIN 碼，僅需 ID** (模擬簡化)。
+                        </div>
+                        <form id="tracking-form" onsubmit="handleTrackingSubmit(event)">
+                            <div class="flex space-x-2">
+                                <input type="text" id="track-id" placeholder="請輸入追蹤 ID (例: C001)" required class="flex-grow p-3 border border-gray-300 rounded-lg focus:ring-phsa-red focus:border-phsa-red uppercase">
+                                <button type="submit" class="bg-phsa-blue text-white font-semibold py-3 px-6 rounded-lg hover:bg-blue-700 transition-colors">
+                                    查詢
+                                </button>
+                            </div>
+                        </form>
+                        <div id="tracking-result" class="mt-8">
+                            <!-- 查詢結果將顯示在這裡 -->
+                        </div>
+                    </div>
+                </div>
+            `;
+            lucide.createIcons();
+            // 根據狀態條重設 active 狀態
+            if (APP_STATE.trackingId) {
+                showComplaintSection('track');
+                document.getElementById('track-id').value = APP_STATE.trackingId;
+                handleTrackingSubmit({ preventDefault: () => {} });
+            } else {
+                showComplaintSection('submit');
+            }
+        }
+
+        // 3. 社團專區頁面渲染
+        function renderClubs() {
+            const categories = ['全部', '藝文', '運動', '服務', '學術'];
+            const categoryHtml = categories.map(cat => `
+                <button class="px-4 py-2 rounded-full text-sm font-medium border border-gray-300 hover:bg-phsa-red hover:text-white transition-colors" data-category="${cat}" onclick="filterClubs('${cat}')">
+                    ${cat}
+                </button>
+            `).join('');
+
+            const clubHtml = APP_STATE.mockData.clubs.map(club => `
+                <div class="bg-white rounded-xl card-shadow overflow-hidden transition-all hover:shadow-lg">
+                    <img src="${club.imageUrl}" alt="${club.name} 宣傳圖" class="w-full h-40 object-cover">
+                    <div class="p-5">
+                        <span class="inline-block px-3 py-1 text-xs font-semibold rounded-full bg-gray-200 text-gray-700">${club.category}</span>
+                        <h3 class="text-xl font-bold mt-2 text-gray-900">${club.name}</h3>
+                        <p class="text-gray-600 text-sm mt-1">${club.desc}</p>
+                        <div class="mt-4 flex justify-between items-center">
+                            <span class="text-sm text-gray-500">社長: ${club.leader}</span>
+                            <a href="#" class="text-phsa-red font-semibold hover:underline text-sm" onclick="event.preventDefault(); alert('TODO: 導向社團詳細頁面');">
+                                了解更多 <i data-lucide="chevron-right" class="w-4 h-4 inline-block"></i>
+                            </a>
+                        </div>
+                    </div>
+                </div>
+            `).join('');
+
+            appContainer.innerHTML = `
+                <h1 class="text-3xl font-bold mb-6 text-phsa-red">社團專區 (Club Directory)</h1>
+
+                <!-- 搜尋與篩選 -->
+                <div class="mb-8 p-6 bg-white rounded-xl card-shadow">
+                    <input type="text" placeholder="輸入社團名稱或關鍵字搜尋..." class="w-full p-3 border border-gray-300 rounded-lg focus:ring-phsa-red focus:border-phsa-red mb-4">
+                    <div class="flex flex-wrap gap-2" id="club-category-filters">
+                        ${categoryHtml}
+                    </div>
+                </div>
+
+                <!-- 社團列表 -->
+                <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6" id="club-list">
+                    ${clubHtml}
+                </div>
+                <!-- TODO: API 替換點 - 社團列表 API -->
+            `;
+            lucide.createIcons();
+        }
+
+        // 4. 後台登入/儀表板 (Mock) 頁面渲染
+        function renderAdmin() {
+            if (APP_STATE.isLoggedIn) {
+                renderAdminDashboard();
+                return;
+            }
+
+            appContainer.innerHTML = `
+                <div class="max-w-md mx-auto bg-white p-8 rounded-xl card-shadow mt-10">
+                    <h1 class="text-3xl font-bold mb-6 text-center text-phsa-red">幹部登入</h1>
+                    <form onsubmit="handleAdminLogin(event)">
+                        <div class="mb-4">
+                            <label for="admin-email" class="block text-sm font-medium text-gray-700 mb-1">學校 Email</label>
+                            <input type="email" id="admin-email" value="admin@pksh.edu.tw" required class="w-full p-3 border border-gray-300 rounded-lg focus:ring-phsa-red focus:border-phsa-red">
+                        </div>
+                        <div class="mb-6">
+                            <label for="admin-password" class="block text-sm font-medium text-gray-700 mb-1">密碼</label>
+                            <input type="password" id="admin-password" value="123456" required class="w-full p-3 border border-gray-300 rounded-lg focus:ring-phsa-red focus:border-phsa-red">
+                        </div>
+                        <button type="submit" class="w-full bg-phsa-red text-white font-semibold py-3 rounded-lg hover:bg-red-700 transition-colors">
+                            登入後台
+                        </button>
+                        <p id="login-message" class="text-center text-sm mt-4 text-red-500"></p>
+                    </form>
+                    <!-- TODO: API 替換點 - 登入 API Call -->
+                </div>
+            `;
+        }
+
+        // 4.1 Admin Dashboard 模擬
+        function renderAdminDashboard() {
+             const complaintsPending = Object.values(APP_STATE.mockData.complaints).filter(c => c.status === '已收到').length;
+             const applicationsPending = APP_STATE.mockData.clubApplications.filter(a => a.status === '已收件').length;
+            
+             appContainer.innerHTML = `
+                <h1 class="text-3xl font-bold mb-6 text-phsa-red">儀表板 (Admin)</h1>
+                <div class="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
+                    <!-- 卡片 1: 待處理申訴 -->
+                    <div class="bg-white p-6 rounded-xl card-shadow border-l-4 border-phsa-red">
+                        <p class="text-sm font-medium text-phsa-red">待處理申訴</p>
+                        <p class="text-3xl font-bold mt-1">${complaintsPending}</p>
+                        <a href="#" class="text-sm text-gray-500 hover:text-phsa-red">查看所有案件</a>
+                    </div>
+                    <!-- 卡片 2: 社團申請 -->
+                    <div class="bg-white p-6 rounded-xl card-shadow border-l-4 border-phsa-blue">
+                        <p class="text-sm font-medium text-phsa-blue">待審核申請</p>
+                        <p class="text-3xl font-bold mt-1">${applicationsPending}</p>
+                        <a href="#" class="text-sm text-gray-500 hover:text-phsa-blue">審核社團活動</a>
+                    </div>
+                    <!-- 卡片 3: 公告發布 -->
+                    <div class="bg-white p-6 rounded-xl card-shadow border-l-4 border-gray-500">
+                        <p class="text-sm font-medium text-gray-500">發布新公告</p>
+                        <p class="text-3xl font-bold mt-1">📝</p>
+                        <a href="#" class="text-sm text-gray-500 hover:text-gray-900">進入編輯器</a>
+                    </div>
+                </div>
+
+                <!-- 模擬申訴案件列表 -->
+                <div class="bg-white p-6 rounded-xl card-shadow mb-8">
+                    <h2 class="text-xl font-bold mb-4 text-gray-900">申訴案件追蹤 (權益組)</h2>
+                    <table class="min-w-full divide-y divide-gray-200">
+                        <thead class="bg-gray-50">
+                            <tr>
+                                <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">ID</th>
+                                <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">類別</th>
+                                <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">狀態</th>
+                                <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">操作</th>
+                            </tr>
+                        </thead>
+                        <tbody class="divide-y divide-gray-200">
+                            ${Object.keys(APP_STATE.mockData.complaints).map(key => {
+                                const c = APP_STATE.mockData.complaints[key];
+                                return `
+                                    <tr>
+                                        <td class="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">${key}</td>
+                                        <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">${c.category}</td>
+                                        <td class="px-6 py-4 whitespace-nowrap">
+                                            <span class="px-2 inline-flex text-xs leading-5 font-semibold rounded-full ${c.status === '已結案' ? 'bg-green-100 text-green-800' : c.status === '處理中' ? 'bg-yellow-100 text-yellow-800' : 'bg-red-100 text-red-800'}">
+                                                ${c.status}
+                                            </span>
+                                        </td>
+                                        <td class="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
+                                            <button class="text-phsa-red hover:text-red-900" onclick="alert('TODO: 進入案件回覆介面')">處理</button>
+                                        </td>
+                                    </tr>
+                                `;
+                            }).join('')}
+                        </tbody>
+                    </table>
+                </div>
+
+                <button class="text-gray-500 hover:text-gray-900 mt-4 text-sm" onclick="handleAdminLogout()">
+                    <i data-lucide="log-out" class="w-4 h-4 inline-block mr-1"></i> 登出
+                </button>
+            `;
+             lucide.createIcons();
+        }
+
+        // --- 互動邏輯函數 ---
+
+        // 頁面導航
+        function navigate(view) {
+            APP_STATE.view = view;
+            APP_STATE.trackingId = null; // 清除追蹤 ID 狀態
+            const mobileMenu = document.getElementById('mobile-menu');
+            if (mobileMenu && !mobileMenu.classList.contains('hidden')) {
+                mobileMenu.classList.add('hidden');
+            }
+
+            switch (view) {
+                case 'complaint':
+                    renderComplaint();
+                    break;
+                case 'clubs':
+                    renderClubs();
+                    break;
+                case 'admin':
+                    renderAdmin();
+                    break;
+                default:
+                    renderHome();
+                    break;
+            }
+            window.scrollTo(0, 0); // 回到頂部
+        }
+        
+        // 申訴頁面 Tab 切換
+        function showComplaintSection(section) {
+            const submit = document.getElementById('complaint-submit-section');
+            const track = document.getElementById('complaint-track-section');
+            const tabSubmit = document.getElementById('tab-submit');
+            const tabTrack = document.getElementById('tab-track');
+
+            if (section === 'submit') {
+                submit.classList.remove('hidden');
+                track.classList.add('hidden');
+                tabSubmit.classList.add('border-phsa-red', 'text-phsa-red');
+                tabSubmit.classList.remove('border-transparent', 'text-gray-500');
+                tabTrack.classList.remove('border-phsa-red', 'text-phsa-red');
+                tabTrack.classList.add('border-transparent', 'text-gray-500');
+            } else if (section === 'track') {
+                submit.classList.add('hidden');
+                track.classList.remove('hidden');
+                tabTrack.classList.add('border-phsa-red', 'text-phsa-red');
+                tabTrack.classList.remove('border-transparent', 'text-gray-500');
+                tabSubmit.classList.remove('border-phsa-red', 'text-phsa-red');
+                tabSubmit.classList.add('border-transparent', 'text-gray-500');
+            }
+        }
+
+        // 申訴提交處理
+        function handleComplaintSubmit(event) {
+            event.preventDefault();
+            const category = document.getElementById('category').value;
+            const content = document.getElementById('content').value.trim();
+
+            if (content.length < 20) {
+                 alert('請提供更詳細的申訴內容 (至少 20 個字)。');
+                 return;
+            }
+
+            // --- API 替換點: POST /api/complaints ---
+            // 模擬後端回傳 Tracking ID
+            const newId = 'C' + Math.floor(Math.random() * 900 + 100); 
+
+            // 模擬成功回饋
+            document.getElementById('complaint-form').reset();
+            APP_STATE.trackingId = newId;
+
+            alert(`申訴成功！您的追蹤 ID 是：${newId}。請妥善保存！`);
+            showComplaintSection('track');
+            document.getElementById('track-id').value = newId;
+            handleTrackingSubmit({ preventDefault: () => {} }); // 自動追蹤
+            // ----------------------------------------
+        }
+
+        // 申訴追蹤查詢處理
+        function handleTrackingSubmit(event) {
+            event.preventDefault();
+            const trackId = document.getElementById('track-id').value.toUpperCase();
+            const resultDiv = document.getElementById('tracking-result');
+            
+            // --- API 替換點: GET /api/complaints/:id ---
+            const caseData = APP_STATE.mockData.complaints[trackId];
+
+            if (!caseData) {
+                resultDiv.innerHTML = `<p class="text-red-600 font-semibold mt-4">查無此案件 ID 或案件已過期。</p>`;
+                return;
+            }
+            // ----------------------------------------
+
+            const steps = ['已收到', '處理中', '已回覆', '已結案'];
+            const currentStatusIndex = steps.indexOf(caseData.status);
+
+            const stepsHtml = steps.map((step, index) => `
+                <div class="status-step flex-1 text-center ${index <= currentStatusIndex ? 'active' : ''}">
+                    <div class="status-dot w-8 h-8 rounded-full mx-auto mb-2 flex items-center justify-center ${index < currentStatusIndex ? 'bg-phsa-red' : index === currentStatusIndex ? 'bg-phsa-red/50' : 'bg-gray-200'}">
+                        <i data-lucide="${index === 0 ? 'inbox' : index === 1 ? 'loader' : index === 2 ? 'message-square' : 'check-circle'}" class="w-4 h-4 text-white"></i>
+                    </div>
+                    <p class="status-text text-sm text-gray-500">${step}</p>
+                </div>
+            `).join(`
+                <div class="flex-1 h-1 bg-gray-200 mt-4"></div>
+            `);
+
+            resultDiv.innerHTML = `
+                <div class="mb-6">
+                    <h3 class="text-xl font-bold mb-2">案件 ID: ${trackId}</h3>
+                    <p class="text-lg text-gray-700">類別: ${caseData.category}</p>
+                    <p class="text-lg text-gray-700">目前狀態: 
+                        <span class="font-semibold ${caseData.status === '已結案' ? 'text-green-600' : caseData.status === '處理中' ? 'text-yellow-600' : 'text-red-600'}">
+                            ${caseData.status}
+                        </span>
+                    </p>
+                </div>
+
+                <!-- 狀態進度條 -->
+                <div class="flex items-start justify-between mb-8">
+                    ${stepsHtml}
+                </div>
+                
+                <!-- 申訴內容與回覆 -->
+                <div class="bg-gray-100 p-4 rounded-lg">
+                    <p class="font-semibold mb-2">您提交的內容：</p>
+                    <p class="text-gray-700 italic">${caseData.content}</p>
+                </div>
+                ${caseData.adminReply ? `
+                    <div class="bg-phsa-blue/10 border-l-4 border-phsa-blue p-4 rounded-lg mt-4">
+                        <p class="font-semibold text-phsa-blue mb-2">學生會/權責單位回覆：</p>
+                        <p class="text-gray-800">${caseData.adminReply}</p>
+                    </div>
+                ` : '<p class="mt-4 text-gray-500">權益組正在積極處理中，請耐心等候回覆...</p>'}
+            `;
+            lucide.createIcons();
+        }
+
+        // 社團篩選
+        function filterClubs(category) {
+            // 這裡可以實現前端篩選邏輯，或觸發 API 請求
+            alert(`模擬篩選社團，篩選類別: ${category}`);
+        }
+
+        // 幹部登入模擬
+        function handleAdminLogin(event) {
+            event.preventDefault();
+            const email = document.getElementById('admin-email').value;
+            const password = document.getElementById('admin-password').value;
+            const messageEl = document.getElementById('login-message');
+            
+            // TODO: API 替換點 - POST /api/auth/login
+            if (email === 'admin@pksh.edu.tw' && password === '123456') {
+                APP_STATE.isLoggedIn = true;
+                messageEl.textContent = '登入成功！';
+                messageEl.classList.remove('text-red-500');
+                messageEl.classList.add('text-green-500');
+                setTimeout(() => navigate('admin'), 500);
+            } else {
+                messageEl.textContent = '帳號或密碼錯誤。';
+            }
+            // ----------------------------------------
+        }
+
+        // 幹部登出
+        function handleAdminLogout() {
+            // TODO: API 替換點 - POST /api/auth/logout
+            APP_STATE.isLoggedIn = false;
+            navigate('home');
+            alert('您已安全登出。');
+            // ----------------------------------------
+        }
+
+        // Mobile Menu Toggler
+        document.addEventListener('DOMContentLoaded', () => {
+            const menuButton = document.getElementById('menu-button');
+            const mobileMenu = document.getElementById('mobile-menu');
+
+            if (menuButton) {
+                menuButton.addEventListener('click', () => {
+                    mobileMenu.classList.toggle('hidden');
+                });
+            }
+
+            // 初始渲染 Home 頁面
+            navigate('home');
+        });
+
+        // PWA 建議：Service Worker 註冊 (此處為模擬提示)
+        if ('serviceWorker' in navigator) {
+            setTimeout(() => {
+                console.log('TODO: 註冊 Service Worker 實現 PWA 快取。');
+            }, 3000);
+        }
+    </script>
+</body>
+</html>
