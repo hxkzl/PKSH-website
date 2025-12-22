@@ -23,6 +23,13 @@
                     },
                     animation: {
                         'bounce-slow': 'bounce 3s infinite',
+                        'fade-in': 'fadeIn 0.5s ease-in-out'
+                    },
+                    keyframes: {
+                        fadeIn: {
+                            '0%': { opacity: '0' },
+                            '100%': { opacity: '1' },
+                        }
                     }
                 }
             }
@@ -202,7 +209,7 @@
                 eventTitle: '近期活動一覽',
                 meetingTitle: '會議記錄存檔',
                 clubTitle: '社團專區',
-                rightsMailbox: '學權信箱', rightsDesc: '發現校園設備損壞、對學校政策有疑問或建議？請填寫此表單。',
+                rightsMailbox: '學權信箱', rightsDesc: '發現校園設備損壞、對學校政策有疑問或建議？請填寫此表單，學權組將為您爭取權益。',
                 anonMailbox: '匿名信箱', anonDesc: '心情抒發、想對學生會說悄悄話？這裡是絕對保密的樹洞。',
                 goToForm: '前往填寫表單', searchPlaceholder: '輸入關鍵字搜尋公告或活動...', noResults: '沒有找到相關結果',
                 col_date: '日期', col_item: '項目', col_amount: '金額',
@@ -223,8 +230,8 @@
                 eventTitle: 'Upcoming Events',
                 meetingTitle: 'Meeting Minutes Archive',
                 clubTitle: 'Student Clubs',
-                rightsMailbox: 'Student Rights Mailbox', rightsDesc: 'Report damaged facilities or suggest policy changes.',
-                anonMailbox: 'Anonymous Mailbox', anonDesc: 'Share your feelings or whisper to the Student Council.',
+                rightsMailbox: 'Student Rights Mailbox', rightsDesc: 'Report damaged facilities or suggest policy changes. The Student Rights Dept will fight for you.',
+                anonMailbox: 'Anonymous Mailbox', anonDesc: 'Share your feelings or whisper to the Student Council. This is a confidential space.',
                 goToForm: 'Fill out Form', searchPlaceholder: 'Search news or events...', noResults: 'No results found',
                 col_date: 'Date', col_item: 'Item', col_amount: 'Amount',
                 role_pres: 'President', role_vp: 'Vice President', role_admin: 'Administrative Dept', role_act: 'Activity Dept', role_mobile: 'Logistics Dept',
@@ -237,8 +244,11 @@
             lang: 'zh',
             darkMode: false,
             userId: null,
+            // 輪播計時器
+            confessionTimer: null,
+            confessionIndex: 0,
             mockData: {
-                // 首頁公告更新為金勾盃賽程
+                // 首頁公告
                 announcements: [
                     { 
                         id: 1, 
@@ -270,8 +280,16 @@
                         `
                     }
                 ],
+                // 告白牆模擬資料 (輪播用)
+                confessionWall: [
+                    { content: "傳情的巧克力真的很好吃，謝謝學姊！", author: "高一的小明" },
+                    { content: "金勾盃大家加油！期待神秘嘉賓！", author: "路過的同學" },
+                    { content: "天氣變冷了，大家要注意保暖喔～", author: "暖暖包" },
+                    { content: "學生會辛苦了，活動辦得很棒！", author: "高三老屁股" },
+                    { content: "希望能多辦一點校際交流活動！", author: "想交朋友的人" }
+                ],
                 events: [
-                    { date: '12/24', title_zh: '金勾盃歌唱大賽', title_en: 'Golden Hook Cup', location_zh: '活動中心', location_en: 'Activity Center', time: '13:00', type: 'Entertainment' },
+                    { date: '12/24', title_zh: '金勾盃歌唱大賽', title_en: 'Jingle Bell Singing Contest', location_zh: '活動中心', location_en: 'Activity Center', time: '13:00', type: 'Entertainment' },
                     { date: '01/16', title_zh: '第三次段考 Day1', title_en: '3rd Midterm Exam Day 1', location_zh: '各班教室', location_en: 'Classrooms', time: '08:00', type: 'Academic' },
                 ],
                 finance: [
@@ -410,6 +428,36 @@
             }, 1000);
         };
 
+        // --- 告白牆輪播邏輯 ---
+        function startConfessionCarousel() {
+            if (APP_STATE.confessionTimer) clearInterval(APP_STATE.confessionTimer);
+            const updateConfession = () => {
+                const elContent = document.getElementById('confession-content');
+                const elAuthor = document.getElementById('confession-author');
+                if(!elContent || !elAuthor) return;
+
+                const data = APP_STATE.mockData.confessionWall[APP_STATE.confessionIndex];
+                
+                // 淡出動畫
+                elContent.classList.remove('animate-fade-in');
+                elContent.style.opacity = 0;
+                
+                setTimeout(() => {
+                    elContent.innerText = `"${data.content}"`;
+                    elAuthor.innerText = `- ${data.author}`;
+                    elContent.style.opacity = 1;
+                    elContent.classList.add('animate-fade-in');
+                }, 300);
+
+                APP_STATE.confessionIndex = (APP_STATE.confessionIndex + 1) % APP_STATE.mockData.confessionWall.length;
+            };
+
+            // 初始顯示
+            updateConfession();
+            // 每 5 秒切換
+            APP_STATE.confessionTimer = setInterval(updateConfession, 5000);
+        }
+
         function renderHome() {
             const announcements = APP_STATE.mockData.announcements;
             const newsHtml = announcements.map(item => `
@@ -417,7 +465,7 @@
                     <span class="text-xs font-bold text-theme uppercase">${isEn() ? item.tag_en : item.tag_zh}</span>
                     <h3 class="text-lg font-bold mt-1 dark:text-white">${isEn() ? item.title_en : item.title_zh}</h3>
                     <p class="text-sm text-gray-400 mt-1 mb-2">${item.date}</p>
-                    ${item.content_zh ? `<div class="mt-2 text-gray-600 dark:text-gray-300">${item.content_zh}</div>` : ''}
+                    ${item.content_zh ? `<div class="mt-2 text-gray-600 dark:text-gray-300 overflow-x-auto">${item.content_zh}</div>` : ''}
                 </div>
             `).join('');
 
@@ -441,11 +489,11 @@
                     <div>
                         <div class="bg-white dark:bg-gray-800 p-6 rounded-xl shadow-md sticky top-24">
                             <h2 class="text-xl font-bold text-pink-500 mb-4 flex items-center gap-2"><i data-lucide="heart"></i> ${t('confession')}</h2>
-                            <div class="bg-pink-50 dark:bg-pink-900/20 p-4 rounded-lg border border-pink-100 dark:border-pink-900">
-                                <p class="italic text-gray-700 dark:text-gray-300">"傳情的巧克力真的很好吃，謝謝學姊！"</p>
-                                <p class="text-right text-xs text-gray-500 mt-2">- 高一的小明</p>
+                            <div class="bg-pink-50 dark:bg-pink-900/20 p-4 rounded-lg border border-pink-100 dark:border-pink-900 min-h-[120px] flex flex-col justify-center">
+                                <p id="confession-content" class="italic text-gray-700 dark:text-gray-300 text-lg font-medium transition-opacity duration-300">"載入中..."</p>
+                                <p id="confession-author" class="text-right text-xs text-gray-500 mt-2 transition-opacity duration-300"></p>
                             </div>
-                            <button class="w-full mt-4 text-center text-sm text-pink-500 hover:underline" onclick="navigate('mailboxes')">我要告白</button>
+                            <a href="https://forms.gle/6SJpkYYfd48Vj7yv7" target="_blank" class="block w-full mt-4 bg-pink-500 text-white font-bold py-2 rounded text-center hover:bg-pink-600 transition">我要告白</a>
                         </div>
                     </div>
                 </div>
@@ -508,7 +556,8 @@
         }
 
         function renderMailboxes() {
-            return `<div class="max-w-4xl mx-auto"><h1 class="text-3xl font-bold mb-8 text-center text-theme">${t('mailboxes')}</h1><div class="grid grid-cols-1 md:grid-cols-2 gap-8"><div class="bg-white dark:bg-gray-800 p-8 rounded-2xl shadow-lg hover:shadow-2xl transition border-t-8 border-blue-500 flex flex-col items-center text-center"><div class="bg-blue-100 p-4 rounded-full mb-4"><i data-lucide="scale" class="w-10 h-10 text-blue-600"></i></div><h2 class="text-2xl font-bold mb-2 dark:text-white">${t('rightsMailbox')}</h2><p class="text-gray-500 dark:text-gray-400 mb-6 flex-grow">${t('rightsDesc')}</p><a href="https://forms.gle/HAxbZJCiCEFhVkwV6" target="_blank" class="w-full bg-blue-600 hover:bg-blue-700 text-white font-bold py-3 rounded-lg transition flex justify-center items-center gap-2">${t('goToForm')} <i data-lucide="external-link" class="w-4 h-4"></i></a></div><div class="bg-white dark:bg-gray-800 p-8 rounded-2xl shadow-lg hover:shadow-2xl transition border-t-8 border-pink-500 flex flex-col items-center text-center"><div class="bg-pink-100 p-4 rounded-full mb-4"><i data-lucide="ghost" class="w-10 h-10 text-pink-600"></i></div><h2 class="text-2xl font-bold mb-2 dark:text-white">${t('anonMailbox')}</h2><p class="text-gray-500 dark:text-gray-400 mb-6 flex-grow">${t('anonDesc')}</p><a href="https://forms.gle/Qix1Xt8tHTVYo4Ry6" target="_blank" class="w-full bg-pink-500 hover:bg-pink-600 text-white font-bold py-3 rounded-lg transition flex justify-center items-center gap-2">${t('goToForm')} <i data-lucide="external-link" class="w-4 h-4"></i></a></div></div></div>`;
+            // 更新匿名信箱連結
+            return `<div class="max-w-4xl mx-auto"><h1 class="text-3xl font-bold mb-8 text-center text-theme">${t('mailboxes')}</h1><div class="grid grid-cols-1 md:grid-cols-2 gap-8"><div class="bg-white dark:bg-gray-800 p-8 rounded-2xl shadow-lg hover:shadow-2xl transition border-t-8 border-blue-500 flex flex-col items-center text-center"><div class="bg-blue-100 p-4 rounded-full mb-4"><i data-lucide="scale" class="w-10 h-10 text-blue-600"></i></div><h2 class="text-2xl font-bold mb-2 dark:text-white">${t('rightsMailbox')}</h2><p class="text-gray-500 dark:text-gray-400 mb-6 flex-grow">${t('rightsDesc')}</p><a href="https://forms.gle/HAxbZJCiCEFhVkwV6" target="_blank" class="w-full bg-blue-600 hover:bg-blue-700 text-white font-bold py-3 rounded-lg transition flex justify-center items-center gap-2">${t('goToForm')} <i data-lucide="external-link" class="w-4 h-4"></i></a></div><div class="bg-white dark:bg-gray-800 p-8 rounded-2xl shadow-lg hover:shadow-2xl transition border-t-8 border-pink-500 flex flex-col items-center text-center"><div class="bg-pink-100 p-4 rounded-full mb-4"><i data-lucide="ghost" class="w-10 h-10 text-pink-600"></i></div><h2 class="text-2xl font-bold mb-2 dark:text-white">${t('anonMailbox')}</h2><p class="text-gray-500 dark:text-gray-400 mb-6 flex-grow">${t('anonDesc')}</p><a href="https://forms.gle/6SJpkYYfd48Vj7yv7" target="_blank" class="w-full bg-pink-500 hover:bg-pink-600 text-white font-bold py-3 rounded-lg transition flex justify-center items-center gap-2">${t('goToForm')} <i data-lucide="external-link" class="w-4 h-4"></i></a></div></div></div>`;
         }
         
         function renderClubs() {
@@ -562,6 +611,13 @@
         function render() {
             const container = document.getElementById('app-container');
             const view = APP_STATE.view;
+            
+            // 如果離開首頁，清除輪播
+            if (view !== 'home' && APP_STATE.confessionTimer) {
+                clearInterval(APP_STATE.confessionTimer);
+                APP_STATE.confessionTimer = null;
+            }
+
             document.querySelectorAll('.nav-btn').forEach(btn => {
                 const isActive = btn.dataset.key === view;
                 if(isActive) btn.classList.add('text-theme', 'bg-gray-50', 'dark:bg-gray-700', 'font-bold');
@@ -577,6 +633,12 @@
                 'contact': renderContact, 'meetings': renderMeetings, 'admin': renderAdmin
             };
             container.innerHTML = routes[view] ? routes[view]() : renderHome();
+            
+            // 如果進入首頁，啟動輪播
+            if (view === 'home') {
+                startConfessionCarousel();
+            }
+
             lucide.createIcons();
             window.scrollTo(0,0);
         }
