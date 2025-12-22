@@ -16,6 +16,7 @@
                             dark: '#00a092',
                             light: '#e0fbf9'
                         },
+                        // Gemini 漸層色設定
                         gemini: {
                             start: '#4E8cff',
                             end: '#E04f5f'
@@ -59,18 +60,16 @@
 
         /* 搜尋視窗過渡 */
         #search-modal { transition: opacity 0.3s ease-in-out; }
-        
-        /* Gemini 漸層 */
+
+        /* Gemini 相關樣式 */
         .bg-gradient-gemini {
             background: linear-gradient(135deg, #4E8cff, #E04f5f);
         }
-
-        /* 聊天視窗動畫 */
         #gemini-chat-window { transition: transform 0.3s ease-in-out, opacity 0.3s ease-in-out; }
-        .chat-bubble { max-width: 80%; padding: 10px 14px; border-radius: 12px; font-size: 0.95rem; line-height: 1.4; }
-        .chat-user { background-color: #00c8b7; color: white; align-self: flex-end; border-bottom-right-radius: 2px; }
-        .chat-ai { background-color: #f3f4f6; color: #1f2937; align-self: flex-start; border-bottom-left-radius: 2px; }
-        .dark .chat-ai { background-color: #374151; color: #e5e7eb; }
+        .chat-bubble { max-width: 85%; padding: 10px 14px; border-radius: 16px; font-size: 0.95rem; line-height: 1.5; word-break: break-word; }
+        .chat-user { background-color: #00c8b7; color: white; align-self: flex-end; border-bottom-right-radius: 4px; }
+        .chat-ai { background-color: #f3f4f6; color: #1f2937; align-self: flex-start; border-bottom-left-radius: 4px; box-shadow: 0 1px 2px rgba(0,0,0,0.05); }
+        .dark .chat-ai { background-color: #374151; color: #e5e7eb; border: 1px solid #4b5563; }
 
         body, div, nav, header { transition: background-color 0.3s, color 0.3s; }
     </style>
@@ -145,19 +144,32 @@
     <div class="fixed bottom-6 right-6 z-50 flex flex-col items-end gap-4">
         <div id="gemini-chat-window" class="w-80 sm:w-96 bg-white dark:bg-gray-800 rounded-2xl shadow-2xl border border-gray-200 dark:border-gray-700 hidden transform origin-bottom-right scale-90 opacity-0 flex flex-col max-h-[500px]">
             <div class="bg-gradient-gemini p-4 rounded-t-2xl flex justify-between items-center text-white">
-                <div class="flex items-center gap-2"><i data-lucide="sparkles" class="w-5 h-5"></i><span class="font-bold">Gemini 智慧助手</span></div>
-                <button onclick="toggleGemini()" class="hover:text-gray-200"><i data-lucide="x" class="w-5 h-5"></i></button>
+                <div class="flex items-center gap-2">
+                    <i data-lucide="sparkles" class="w-5 h-5 animate-pulse"></i>
+                    <span class="font-bold tracking-wide">Gemini 智慧助手</span>
+                </div>
+                <button onclick="toggleGemini()" class="hover:bg-white/20 rounded-full p-1 transition"><i data-lucide="x" class="w-5 h-5"></i></button>
             </div>
-            <div id="gemini-messages" class="flex-grow p-4 overflow-y-auto space-y-3 bg-gray-50 dark:bg-gray-900 h-80">
-                <div class="chat-bubble chat-ai">嗨！我是北港高中的 AI 助手。請問今天有什麼我可以幫您的嗎？✨</div>
+            <div id="gemini-messages" class="flex-grow p-4 overflow-y-auto space-y-3 bg-gray-50 dark:bg-gray-900 h-80 scroll-smooth">
+                <div class="chat-bubble chat-ai">
+                    嗨！我是北港高中的 AI 助手。您可以問我關於學校活動、社團或學生會的問題喔！✨ (此為模擬介面)
+                </div>
             </div>
-            <div class="p-3 border-t dark:border-gray-700 bg-white dark:bg-gray-800 rounded-b-2xl flex gap-2">
-                <input type="text" id="gemini-input" placeholder="輸入訊息..." class="flex-grow p-2 rounded-lg border dark:border-gray-600 dark:bg-gray-700 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-400" onkeypress="handleGeminiEnter(event)">
-                <button onclick="sendGeminiMessage()" class="bg-gradient-gemini p-2 rounded-lg text-white hover:opacity-90 transition transform active:scale-95"><i data-lucide="send" class="w-5 h-5"></i></button>
+            <div class="p-3 border-t dark:border-gray-700 bg-white dark:bg-gray-800 rounded-b-2xl flex gap-2 items-center">
+                <input type="text" id="gemini-input" placeholder="輸入訊息..." class="flex-grow p-2 pl-4 rounded-full border border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-white focus:outline-none focus:border-gemini-start focus:ring-1 focus:ring-gemini-start transition" onkeypress="handleGeminiEnter(event)">
+                <button onclick="sendGeminiMessage()" class="bg-gradient-gemini p-2.5 rounded-full text-white hover:opacity-90 transition transform active:scale-95 shadow-md disabled:opacity-50">
+                    <i data-lucide="send-horizontal" class="w-5 h-5"></i>
+                </button>
             </div>
         </div>
-        <button onclick="toggleGemini()" class="bg-white dark:bg-gray-800 p-3 rounded-full shadow-xl border border-gray-100 dark:border-gray-600 group hover:scale-110 transition duration-300">
-            <div class="bg-gradient-gemini p-3 rounded-full text-white shadow-lg animate-bounce-slow"><i data-lucide="bot" class="w-8 h-8"></i></div>
+
+        <button onclick="toggleGemini()" class="group relative">
+             <div class="absolute -inset-0.5 bg-gradient-gemini rounded-full blur opacity-75 group-hover:opacity-100 transition duration-1000 group-hover:duration-200 animate-tilt"></div>
+            <div class="relative bg-white dark:bg-gray-800 p-3 rounded-full shadow-xl border border-gray-100 dark:border-gray-600 group-hover:scale-105 transition duration-300">
+                <div class="bg-gradient-gemini p-3 rounded-full text-white shadow-sm">
+                    <i data-lucide="bot-message-square" class="w-7 h-7"></i>
+                </div>
+            </div>
         </button>
     </div>
 
@@ -244,11 +256,9 @@
             lang: 'zh',
             darkMode: false,
             userId: null,
-            // 輪播計時器
             confessionTimer: null,
             confessionIndex: 0,
             mockData: {
-                // 首頁公告
                 announcements: [
                     { 
                         id: 1, 
@@ -280,7 +290,6 @@
                         `
                     }
                 ],
-                // 告白牆模擬資料 (輪播用)
                 confessionWall: [
                     { content: "傳情的巧克力真的很好吃，謝謝學姊！", author: "高一的小明" },
                     { content: "金勾盃大家加油！期待神秘嘉賓！", author: "路過的同學" },
@@ -308,10 +317,11 @@
                     { roleKey: 'role_pr', chief: '許雅琳', chief_en: 'Xu Ya-Lin', deputy: '', deputy_en: '', desc_zh: '負責本會會議之聯絡及舉辦活動之聯繫，對外負責公共關係之職務。', desc_en: 'Responsible for liaison of meetings and activities, and external public relations duties.' },
                     { roleKey: 'role_mobile', chief: '劉乙葭', chief_en: 'Liu Yi-Jia', deputy: '', deputy_en: '', desc_zh: '負責本會舉辦之場地佈置，及其他服務事項。', desc_en: 'Responsible for venue decoration for council events and other service matters.' }
                 ],
+                // 更新社團順序與圖片檔名
                 clubs: [
+                    { name_zh: '熱舞社', name_en: 'Pop Dance Club', category: 'Dance', img: 'dance.jpg', ig: 'https://www.instagram.com/pkdc.20_flaming/' },
                     { name_zh: '熱音社', name_en: 'Pop Music Club', category: 'Music', img: 'music.jpg', ig: 'https://www.instagram.com/pkhmc_/' },
                     { name_zh: '童軍社', name_en: 'Scout Club', category: 'Service', img: 'scout.jpg', ig: 'https://www.instagram.com/pksh_circus_scout/' },
-                    { name_zh: '熱舞社', name_en: 'Pop Dance Club', category: 'Dance', img: 'dance.jpg', ig: 'https://www.instagram.com/pkdc.20_flaming/' },
                 ],
                 meetings: [
                     { date: '2025-11-05', title_zh: '期中社團長大會會議記錄', title_en: 'Mid-term Club Leaders Meeting Minutes' },
@@ -387,6 +397,7 @@
             }
         };
 
+        // --- Gemini 智慧助手邏輯 (模擬) ---
         window.toggleGemini = () => {
             const window = document.getElementById('gemini-chat-window');
             if (window.classList.contains('hidden')) {
@@ -420,9 +431,12 @@
             setTimeout(() => {
                 document.getElementById(loadingId).remove();
                 let reply = "";
-                if(msg.includes('活動') || msg.includes('event')) reply = "近期有 **金勾盃歌唱大賽 (12/24)** 和 **第三次段考 (1/16)** 喔！";
-                else if(msg.includes('社團') || msg.includes('club')) reply = "我們有熱音社、熱舞社和童軍社等等！";
-                else reply = "我是北港高中學生會的 AI 助手。目前僅提供基本資訊查詢。😊";
+                // 簡單的模擬回應邏輯
+                if(msg.includes('活動') || msg.includes('event')) reply = "近期有 **金勾盃歌唱大賽 (12/24)** 和 **第三次段考 (1/16)** 喔！詳細可以看近期活動頁面。";
+                else if(msg.includes('社團') || msg.includes('club')) reply = "我們有熱舞社、熱音社和童軍社等等！想加入哪個呢？";
+                else if(msg.includes('會長')) reply = "本屆會長是 **張佾傑** 同學，副會長是 **王雅琝** 同學。";
+                else reply = "我是 Gemini 智慧助手 (模擬版)。很高興為您服務！您可以問我關於學生會的資訊喔。😊";
+
                 container.innerHTML += `<div class="chat-bubble chat-ai w-fit mr-auto mb-2">${marked.parse(reply)}</div>`;
                 container.scrollTop = container.scrollHeight;
             }, 1000);
@@ -612,7 +626,7 @@
             const container = document.getElementById('app-container');
             const view = APP_STATE.view;
             
-            // 如果離開首頁，清除輪播
+            // 如果離開首頁，清除輪播計時器
             if (view !== 'home' && APP_STATE.confessionTimer) {
                 clearInterval(APP_STATE.confessionTimer);
                 APP_STATE.confessionTimer = null;
