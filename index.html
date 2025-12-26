@@ -543,7 +543,120 @@
             return `<h1 class="text-3xl font-bold mb-8 text-center text-theme">${t('orgTitle')}</h1><div class="grid grid-cols-1 md:grid-cols-2 gap-8 max-w-4xl mx-auto mb-12">${leadersHtml}</div><div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 auto-rows-fr">${deptsHtml}</div>`;
         }
 
-        function renderFinance() {
+        function renderFinance()
+<script type="module">
+/* ====== Finance ====== */
+function renderFinance() {
+    const rows = APP_STATE.mockData.finance.map(f => `
+        <tr class="border-b dark:border-gray-700">
+            <td class="p-3">${f.date}</td>
+            <td class="p-3">${isEn() ? f.item_en : f.item_zh}</td>
+            <td class="p-3 text-right ${f.amount >= 0 ? 'text-green-600' : 'text-red-500'}">
+                ${f.amount.toLocaleString()}
+            </td>
+        </tr>
+    `).join('');
+
+    return `
+        <h2 class="text-3xl font-bold mb-6 dark:text-white">${t('financeTitle')}</h2>
+        <div class="overflow-x-auto bg-white dark:bg-gray-800 rounded-xl shadow">
+            <table class="w-full text-left">
+                <thead class="bg-gray-100 dark:bg-gray-700">
+                    <tr>
+                        <th class="p-3">${t('col_date')}</th>
+                        <th class="p-3">${t('col_item')}</th>
+                        <th class="p-3 text-right">${t('col_amount')}</th>
+                    </tr>
+                </thead>
+                <tbody>${rows}</tbody>
+            </table>
+        </div>
+    `;
+}
+
+/* ====== Meetings ====== */
+function renderMeetings() {
+    const list = APP_STATE.mockData.meetings.map(m => `
+        <div class="bg-white dark:bg-gray-800 p-5 rounded-xl shadow flex justify-between items-center">
+            <div>
+                <h3 class="font-bold dark:text-white">${isEn() ? m.title_en : m.title_zh}</h3>
+                <p class="text-sm text-gray-400">${m.date}</p>
+            </div>
+            <i data-lucide="file-text" class="text-theme"></i>
+        </div>
+    `).join('');
+
+    return `<h2 class="text-3xl font-bold mb-6 dark:text-white">${t('meetingTitle')}</h2>
+            <div class="space-y-4">${list}</div>`;
+}
+
+/* ====== Organization ====== */
+function renderOrg() {
+    const leaders = APP_STATE.mockData.orgLeaders.map(l => `
+        <div class="bg-white dark:bg-gray-800 p-6 rounded-xl shadow">
+            <h3 class="text-xl font-bold dark:text-white">${l.icon} ${t(l.roleKey)}</h3>
+            <p class="mt-2 font-semibold">${isEn() ? l.name_en : l.name_zh}</p>
+            <p class="text-sm text-gray-500 mt-1">${isEn() ? l.desc_en : l.desc_zh}</p>
+        </div>
+    `).join('');
+
+    const depts = APP_STATE.mockData.orgDepts.map(d => `
+        <div class="bg-gray-50 dark:bg-gray-800 p-6 rounded-xl shadow">
+            <h3 class="font-bold">${d.icon} ${t(d.roleKey)}</h3>
+            <p class="text-sm mt-2">${t('role_chief')}: ${isEn() ? d.chief_en : d.chief}</p>
+            ${d.deputy ? `<p class="text-sm">${t('role_deputy')}: ${isEn() ? d.deputy_en : d.deputy}</p>` : ''}
+        </div>
+    `).join('');
+
+    return `
+        <h2 class="text-3xl font-bold mb-6 dark:text-white">${t('orgTitle')}</h2>
+        <div class="grid md:grid-cols-2 gap-6 mb-10">${leaders}</div>
+        <div class="grid md:grid-cols-3 gap-6">${depts}</div>
+    `;
+}
+
+/* ====== Contact ====== */
+function renderContact() {
+    return `
+        <div class="max-w-xl mx-auto text-center">
+            <h2 class="text-3xl font-bold mb-4 dark:text-white">${t('contact')}</h2>
+            <p class="text-gray-500 mb-8">可透過 IG 或匿名信箱與學生會聯繫</p>
+            <a href="https://www.instagram.com/pksh.su/" target="_blank"
+               class="inline-block bg-theme text-white px-8 py-3 rounded-full font-bold">
+               前往 Instagram
+            </a>
+        </div>
+    `;
+}
+
+/* ====== Navigation ====== */
+window.navigate = (view) => {
+    APP_STATE.view = view;
+    document.getElementById('mobile-menu')?.classList.add('hidden');
+    render();
+};
+
+/* ====== Main Render ====== */
+function render() {
+    const app = document.getElementById('app-container');
+    let html = '';
+
+    switch (APP_STATE.view) {
+        case 'events': html = renderEvents(); break;
+        case 'clubs': html = renderClubs(); break;
+        case 'mailboxes': html = renderMailboxes(); break;
+        case 'finance': html = renderFinance(); break;
+        case 'meetings': html = renderMeetings(); break;
+        case 'org': html = renderOrg(); break;
+        case 'contact': html = renderContact(); break;
+        default: html = renderHome(); startConfessionCarousel();
+    }
+
+    app.innerHTML = html;
+    lucide.createIcons();
+}
+</script>
+ {
             const rows = APP_STATE.mockData.finance.map(f => `
                 <tr class="border-b dark:border-gray-700 hover:bg-gray-50 dark:hover:bg-gray-700/50">
                     <td class="py-3 px-4 dark:text-gray-300">${f.date}</td>
