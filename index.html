@@ -190,8 +190,7 @@
         </div>
     </footer>
 
-    <script type="module" src="main.js"></script>
-    
+    <script type="module">
         import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
         import { getAuth, signInAnonymously, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
 
@@ -781,5 +780,15 @@ function render() {
         render();
     </script>
 </body>
-</html>
+<div id="admin-login-modal" class="fixed inset-0 bg-black/60 hidden z-50 flex items-center justify-center">
+  <div class="bg-white p-6 rounded-xl w-80 space-y-4">
+    <h2 class="text-xl font-bold text-center">幹部登入</h2>
+    <input id="admin-email" class="w-full border p-2 rounded" placeholder="Email">
+    <input id="admin-password" type="password" class="w-full border p-2 rounded" placeholder="Password">
+    <button onclick="adminLogin()" class="w-full bg-theme text-white py-2 rounded font-bold">
+      登入
+    </button>
+  </div>
+</div>
 
+</html>
