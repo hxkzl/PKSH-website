@@ -1,29 +1,34 @@
-window.handleAdminLoginClick = () => {
-  document.getElementById('admin-login-modal').classList.remove('hidden');
+import { initializeApp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js";
+import { getAuth, signInWithEmailAndPassword } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-auth.js";
+
+/* Firebase 初始化 */
+const firebaseConfig = {
+  apiKey: "你的",
+  authDomain: "你的",
+  projectId: "你的",
+  appId: "你的"
 };
-import { signInWithEmailAndPassword } from "firebase/auth";
+
+const app = initializeApp(firebaseConfig);
+const auth = getAuth(app);
+
+/* 打開登入視窗 */
+window.handleAdminLoginClick = () => {
+  document
+    .getElementById('admin-login-modal')
+    .classList.remove('hidden');
+};
+
+/* 管理員登入 */
 window.adminLogin = async () => {
   const email = document.getElementById('admin-email').value;
   const password = document.getElementById('admin-password').value;
 
   try {
-    const result = await signInWithEmailAndPassword(auth, email, password);
+    await signInWithEmailAndPassword(auth, email, password);
     alert('登入成功');
     document.getElementById('admin-login-modal').classList.add('hidden');
   } catch (err) {
     alert('登入失敗：' + err.message);
   }
 };
-onAuthStateChanged(auth, (user) => {
-  if (user && !user.isAnonymous && user.email === ADMIN_EMAIL) {
-    APP_STATE.isAdmin = true;
-  } else {
-    APP_STATE.isAdmin = false;
-  }
-});
-if (APP_STATE.isAdmin) {
-  html += `<button class="bg-red-500 text-white px-4 py-2 rounded">新增資料</button>`;
-}
-
-
-
