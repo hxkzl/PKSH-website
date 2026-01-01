@@ -148,7 +148,7 @@
     <div id="confession-modal" class="fixed inset-0 z-50 bg-black/50 backdrop-blur-sm hidden flex items-center justify-center p-4">
         <div class="bg-white dark:bg-gray-800 rounded-2xl p-6 w-full max-w-md shadow-2xl transform scale-100 transition-all animate-fade-in">
             <h3 class="text-2xl font-bold mb-4 text-theme flex items-center gap-2"><i data-lucide="heart" class="text-pink-500"></i> 我要告白</h3>
-            <p class="text-sm text-gray-500 mb-4 dark:text-gray-400">寫下你想說的話，讓全校都看見！（若未設定 Firebase，將僅顯示成功訊息但不會儲存）</p>
+            <p class="text-sm text-gray-500 mb-4 dark:text-gray-400">寫下你想說的話，讓全校都看見！（目前設為審核制，送出後需待管理員核准才會顯示）</p>
             
             <div class="space-y-4">
                 <div>
@@ -199,9 +199,10 @@
     </footer>
 
     <script type="module">
-        // 1. 引入 Firebase SDK (包含 Auth)
+        // 1. 引入 Firebase SDK
         import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-app.js";
-        import { getFirestore, collection, getDocs, getDoc, setDoc, addDoc, deleteDoc, doc, serverTimestamp, query, orderBy, limit } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore.js";
+        // [新增] 引入 where 用於查詢
+        import { getFirestore, collection, getDocs, getDoc, setDoc, addDoc, deleteDoc, doc, serverTimestamp, query, orderBy, limit, where } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore.js";
         import { getAuth, signInWithEmailAndPassword, signOut, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-auth.js";
 
         // ============================================
@@ -312,7 +313,8 @@
                 filter_all: '全部', filter_academic: '教務', filter_holiday: '假日', filter_event: '活動',
                 login_title: '學生會幹部登入', login_btn: '登入', login_email: '電子郵件', login_pwd: '密碼',
                 admin_dashboard: '管理儀表板', admin_news: '公告管理', admin_events: '活動管理', admin_confess: '告白審核', admin_system: '系統設定', admin_logout: '登出',
-                add_btn: '新增', save_btn: '儲存設定', delete_btn: '刪除', no_data: '暫無資料'
+                add_btn: '新增', save_btn: '儲存設定', delete_btn: '刪除', no_data: '暫無資料',
+                admin_finance: '財務管理', admin_meetings: '會議記錄', admin_downloads: '下載管理'
             },
             en: {
                 home: 'Home', events: 'Events', mailboxes: 'Mailboxes', clubs: 'Clubs', downloads: 'Downloads',
@@ -333,7 +335,8 @@
                 filter_all: 'All', filter_academic: 'Academic', filter_holiday: 'Holiday', filter_event: 'Event',
                 login_title: 'Staff Login', login_btn: 'Login', login_email: 'Email', login_pwd: 'Password',
                 admin_dashboard: 'Dashboard', admin_news: 'Manage News', admin_events: 'Manage Events', admin_confess: 'Confessions', admin_system: 'System Settings', admin_logout: 'Logout',
-                add_btn: 'Add', save_btn: 'Save Settings', delete_btn: 'Delete', no_data: 'No Data'
+                add_btn: 'Add', save_btn: 'Save Settings', delete_btn: 'Delete', no_data: 'No Data',
+                admin_finance: 'Manage Finance', admin_meetings: 'Manage Minutes', admin_downloads: 'Manage Downloads'
             }
         };
 
@@ -345,30 +348,22 @@
             confessionIndex: 0,
             eventFilter: 'All',
             user: null, // User Auth State
-            adminTab: 'news' // news, events, confessions, system
+            adminTab: 'news', // news, events, confessions, system, finance, meetings, downloads
+            isLoading: false
         };
 
         const t = (key) => I18N[APP_STATE.lang][key] || key;
         const isEn = () => APP_STATE.lang === 'en';
 
         // --- Helper: Robust Date Formatting ---
-        // 解決 undefined 問題的核心函式
         function formatDateHelper(dateStr) {
-            // 預設值
             let month = '??';
             let day = '??';
-            
             if (!dateStr) return { month, day };
-
-            // 嘗試處理 YYYY-MM-DD 或 MM/DD 或 MM-DD
             try {
-                // 如果包含 '-'，將其替換為 '/'
                 const standardized = dateStr.replace(/-/g, '/');
                 const parts = standardized.split('/');
-                
                 if (parts.length >= 2) {
-                    // 如果有年份 (例如 2025/12/27)，取最後兩位
-                    // 如果是 12/27，parts[0]是月，parts[1]是日
                     if (parts.length === 3) {
                         month = parts[1];
                         day = parts[2];
@@ -377,9 +372,7 @@
                         day = parts[1];
                     }
                 }
-            } catch (e) {
-                console.error("Date parse error", e);
-            }
+            } catch (e) { console.error("Date parse error", e); }
             return { month, day };
         }
 
@@ -388,16 +381,21 @@
         async function loadDataFromFirebase() {
             if (!db) return;
             try {
+                APP_STATE.isLoading = true;
+
                 // 0. Load System Settings (Marquee)
                 const settingsRef = doc(db, "settings", "config");
                 const settingsSnap = await getDoc(settingsRef);
                 if (settingsSnap.exists()) {
-                    SYSTEM_SETTINGS.marquee = settingsSnap.data().marquee || SYSTEM_SETTINGS.marquee;
+                    const d = settingsSnap.data();
+                    if(Array.isArray(d.marquee)) SYSTEM_SETTINGS.marquee = d.marquee;
+                    else SYSTEM_SETTINGS.marquee = d.marquee || SYSTEM_SETTINGS.marquee;
                 }
-                updateMarquee(); // Update UI immediately
+                updateMarquee(); 
 
-                // 1. Load Confessions
-                const qConfess = query(collection(db, "confessions"), orderBy("timestamp", "desc"), limit(20));
+                // 1. Load Confessions (Public: only 'approved')
+                // 需在 Firebase Console 建立複合索引 (status Asc, timestamp Desc)
+                const qConfess = query(collection(db, "confessions"), where("status", "==", "approved"), orderBy("timestamp", "desc"), limit(20));
                 const snapConfess = await getDocs(qConfess);
                 const fetchedConfessions = [];
                 snapConfess.forEach((doc) => {
@@ -413,34 +411,49 @@
                     APP_DATA.confessionWall = fetchedConfessions;
                 }
 
-                // 2. Load Announcements (News)
+                // 2. Load Announcements
                 const qNews = query(collection(db, "announcements"), orderBy("date", "desc"));
                 const snapNews = await getDocs(qNews);
                 const fetchedNews = [];
-                snapNews.forEach(doc => {
-                     const d = doc.data();
-                     fetchedNews.push({ id: doc.id, ...d });
-                });
-                if(fetchedNews.length > 0) {
-                    APP_DATA.announcements = [...fetchedNews, ...STATIC_DATA.announcements];
-                }
+                snapNews.forEach(doc => { fetchedNews.push({ id: doc.id, ...doc.data() }); });
+                if(fetchedNews.length > 0) APP_DATA.announcements = [...fetchedNews, ...STATIC_DATA.announcements];
 
                 // 3. Load Events
                 const qEvents = query(collection(db, "events"), orderBy("date", "asc"));
                 const snapEvents = await getDocs(qEvents);
                 const fetchedEvents = [];
-                snapEvents.forEach(doc => {
-                    const d = doc.data();
-                    fetchedEvents.push({ id: doc.id, ...d });
-                });
+                snapEvents.forEach(doc => { fetchedEvents.push({ id: doc.id, ...doc.data() }); });
                 if(fetchedEvents.length > 0) {
                     APP_DATA.events = [...fetchedEvents, ...STATIC_DATA.events];
                     APP_DATA.events.sort((a,b) => a.date.localeCompare(b.date));
                 }
 
+                // 4. Load Finance
+                const qFinance = query(collection(db, "finance"), orderBy("date", "desc"));
+                const snapFinance = await getDocs(qFinance);
+                const fetchedFinance = [];
+                snapFinance.forEach(doc => fetchedFinance.push({ id: doc.id, ...doc.data() }));
+                if(fetchedFinance.length > 0) APP_DATA.finance = fetchedFinance;
+
+                // 5. Load Meetings
+                const qMeetings = query(collection(db, "meetings"), orderBy("date", "desc"));
+                const snapMeetings = await getDocs(qMeetings);
+                const fetchedMeetings = [];
+                snapMeetings.forEach(doc => fetchedMeetings.push({ id: doc.id, ...doc.data() }));
+                if(fetchedMeetings.length > 0) APP_DATA.meetings = fetchedMeetings;
+
+                // 6. Load Downloads
+                const qDownloads = query(collection(db, "downloads"), orderBy("date", "desc"));
+                const snapDownloads = await getDocs(qDownloads);
+                const fetchedDownloads = [];
+                snapDownloads.forEach(doc => fetchedDownloads.push({ id: doc.id, ...doc.data() }));
+                if(fetchedDownloads.length > 0) APP_DATA.downloads = fetchedDownloads;
+
                 if(APP_STATE.view === 'home' || APP_STATE.view === 'events') render(); 
             } catch (error) {
                 console.log("Firebase 讀取失敗:", error);
+            } finally {
+                APP_STATE.isLoading = false;
             }
         }
 
@@ -501,32 +514,150 @@
 
         window.addEvent = async () => {
             const title = document.getElementById('event-title').value;
-            const date = document.getElementById('event-date').value; // YYYY-MM-DD
+            const date = document.getElementById('event-date').value;
             const time = document.getElementById('event-time').value;
             const loc = document.getElementById('event-loc').value;
             const type = document.getElementById('event-type').value;
+            const link = document.getElementById('event-link').value; // 新增連結
 
             if(!title || !date) return Swal.fire('欄位未填', '請填寫完整資訊', 'warning');
             
             try {
-                // 強制統一儲存格式，解決顯示 bug
-                // 輸入 YYYY-MM-DD -> 儲存為 YYYY-MM-DD (標準化)
                 await addDoc(collection(db, "events"), {
                     title_zh: title, title_en: title,
-                    date: date, // 儲存原始日期字串，由顯示端 Helper 處理
+                    date: date, 
                     time: time, location_zh: loc, location_en: loc,
-                    type: type, timestamp: serverTimestamp()
+                    type: type, link: link || '', timestamp: serverTimestamp()
                 });
                 Swal.fire('新增成功', '', 'success');
                 await loadDataFromFirebase();
             } catch(e) { Swal.fire('錯誤', e.message, 'error'); }
         }
 
+        // [新增] 財務
+        window.addFinance = async () => {
+            const date = document.getElementById('fin-date').value;
+            const item = document.getElementById('fin-item').value;
+            const amount = parseInt(document.getElementById('fin-amount').value);
+            const type = document.getElementById('fin-type').value; 
+
+            if(!date || !item || !amount) return Swal.fire('資料不全', '', 'warning');
+            try {
+                await addDoc(collection(db, "finance"), {
+                    date, item_zh: item, item_en: item,
+                    amount, type, timestamp: serverTimestamp()
+                });
+                Swal.fire('已新增財務', '', 'success');
+                await loadDataFromFirebase();
+                render(); 
+            } catch(e) { Swal.fire('錯誤', e.message, 'error'); }
+        }
+
+        // [新增] 會議
+        window.addMeeting = async () => {
+            const date = document.getElementById('mt-date').value;
+            const title = document.getElementById('mt-title').value;
+            const link = document.getElementById('mt-link').value; 
+
+            if(!date || !title) return Swal.fire('資料不全', '', 'warning');
+            try {
+                await addDoc(collection(db, "meetings"), {
+                    date, title_zh: title, title_en: title, 
+                    file: link || '#', timestamp: serverTimestamp()
+                });
+                Swal.fire('已新增會議記錄', '', 'success');
+                await loadDataFromFirebase();
+                render();
+            } catch(e) { Swal.fire('錯誤', e.message, 'error'); }
+        }
+
+        // [新增] 下載
+        window.addDownload = async () => {
+            const date = document.getElementById('dl-date').value;
+            const title = document.getElementById('dl-title').value;
+            const link = document.getElementById('dl-link').value;
+            const type = document.getElementById('dl-type').value;
+
+            if(!date || !title || !link) return Swal.fire('資料不全', '', 'warning');
+            try {
+                await addDoc(collection(db, "downloads"), {
+                    date, title_zh: title, title_en: title,
+                    file: link, type, timestamp: serverTimestamp()
+                });
+                Swal.fire('已新增下載', '', 'success');
+                await loadDataFromFirebase();
+                render();
+            } catch(e) { Swal.fire('錯誤', e.message, 'error'); }
+        }
+
+        // [新增] 告白審核邏輯
+        window.loadPendingConfessions = async () => {
+            const div = document.getElementById('admin-pending-list');
+            div.innerHTML = '載入中...';
+            const q = query(collection(db, "confessions"), where("status", "==", "pending"), orderBy("timestamp", "desc"));
+            const snap = await getDocs(q);
+            if(snap.empty) { div.innerHTML = '目前沒有待審核的告白。'; return; }
+            
+            div.innerHTML = snap.docs.map(d => {
+                const data = d.data();
+                return `
+                <div class="bg-gray-50 dark:bg-gray-700 p-4 rounded border-l-4 border-yellow-400 mb-2">
+                    <p class="font-bold mb-1 dark:text-white">${data.content}</p>
+                    <p class="text-xs text-gray-500 mb-2">From: ${data.author}</p>
+                    <div class="flex gap-2">
+                        <button onclick="approveConfession('${d.id}', '${data.content.replace(/'/g, "\\'")}', '${(data.content_en||'').replace(/'/g, "\\'")}')" class="bg-green-500 text-white px-3 py-1 rounded text-sm hover:bg-green-600">通過 & 翻譯</button>
+                        <button onclick="rejectConfession('${d.id}')" class="bg-red-500 text-white px-3 py-1 rounded text-sm hover:bg-red-600">拒絕</button>
+                    </div>
+                </div>`;
+            }).join('');
+        };
+
+        window.approveConfession = async (id, currentContent, currentEn) => {
+            const { value: formValues } = await Swal.fire({
+                title: '審核並翻譯',
+                html:
+                    `<label class="block text-left mb-1">中文內容</label><input id="swal-content" class="swal2-input m-0 mb-3 w-full" value="${currentContent}">` +
+                    `<label class="block text-left mb-1">英文翻譯</label><input id="swal-en" class="swal2-input m-0 w-full" value="${currentEn || ''}" placeholder="在此輸入翻譯">`,
+                focusConfirm: false,
+                showCancelButton: true,
+                confirmButtonText: '通過並發布',
+                preConfirm: () => {
+                    return [
+                        document.getElementById('swal-content').value,
+                        document.getElementById('swal-en').value
+                    ]
+                }
+            });
+
+            if (formValues) {
+                try {
+                    await setDoc(doc(db, "confessions", id), { 
+                        content: formValues[0],
+                        content_en: formValues[1],
+                        status: 'approved' 
+                    }, { merge: true });
+                    Swal.fire('已發布', '', 'success');
+                    loadPendingConfessions(); // Reload list
+                } catch(e) { Swal.fire('錯誤', e.message, 'error'); }
+            }
+        }
+
+        window.rejectConfession = async (id) => {
+            try {
+                await deleteDoc(doc(db, "confessions", id));
+                Swal.fire('已刪除', '', 'success');
+                loadPendingConfessions();
+            } catch(e) { Swal.fire('錯誤', e.message, 'error'); }
+        }
+
         window.saveSystemSettings = async () => {
             const marqueeText = document.getElementById('system-marquee').value;
+            // 支援使用 " | " 來分割多段跑馬燈
+            const marqueeArray = marqueeText.split('|').map(s => s.trim()).filter(s => s);
+
             try {
-                await setDoc(doc(db, "settings", "config"), { marquee: marqueeText });
-                SYSTEM_SETTINGS.marquee = marqueeText;
+                await setDoc(doc(db, "settings", "config"), { marquee: marqueeArray.length > 1 ? marqueeArray : marqueeText });
+                SYSTEM_SETTINGS.marquee = marqueeArray.length > 1 ? marqueeArray : marqueeText;
                 updateMarquee();
                 Swal.fire('設定已儲存', '跑馬燈已更新', 'success');
             } catch(e) { Swal.fire('儲存失敗', e.message, 'error'); }
@@ -565,13 +696,13 @@
 
             try {
                 await addDoc(collection(db, "confessions"), {
-                    content, content_en: content_en || content, author: author || '匿名',
-                    timestamp: serverTimestamp(), status: 'approved'
+                    content, content_en: content_en || '', author: author || '匿名',
+                    timestamp: serverTimestamp(), status: 'pending' // [修改] 狀態改為 pending
                 });
-                Swal.fire('送出成功！', '你的心聲已經傳達出去了！', 'success');
+                Swal.fire('送出成功！', '你的心聲已送出，待學生會審核後顯示！', 'success');
                 toggleConfessionModal();
                 document.getElementById('confession-input-content').value = '';
-                await loadDataFromFirebase();
+                // 不重新讀取，因為只顯示 approved
             } catch (e) {
                 console.error("Error:", e);
                 Swal.fire('傳送失敗', '請稍後再試。', 'error');
@@ -586,7 +717,14 @@
         // --- Logic ---
         function updateMarquee() {
             const el = document.getElementById('marquee-text');
-            if(el) el.innerText = SYSTEM_SETTINGS.marquee;
+            if(!el) return;
+            let content = '';
+            if (Array.isArray(SYSTEM_SETTINGS.marquee)) {
+                content = SYSTEM_SETTINGS.marquee.join(' &nbsp;&nbsp;&nbsp;&nbsp;✦&nbsp;&nbsp;&nbsp;&nbsp; ');
+            } else {
+                content = SYSTEM_SETTINGS.marquee;
+            }
+            el.innerHTML = content;
         }
 
         window.toggleSearch = () => {
@@ -734,7 +872,6 @@
                 : APP_DATA.events.filter(e => e.type === filter);
 
             const eventsHtml = filteredEvents.length > 0 ? filteredEvents.map(ev => {
-                // [FIX] 使用 Helper 處理日期格式，避免 undefined
                 const { month, day } = formatDateHelper(ev.date);
                 
                 return `
@@ -752,6 +889,11 @@
                             <i data-lucide="map-pin" class="w-3 h-3"></i> ${isEn() ? ev.location_en : ev.location_zh} | 
                             <i data-lucide="clock" class="w-3 h-3"></i> ${ev.time}
                         </p>
+                        ${ev.link ? `
+                            <a href="${ev.link}" target="_blank" class="inline-flex items-center mt-2 text-sm text-theme font-bold hover:underline">
+                                相關連結/報名 <i data-lucide="external-link" class="w-3 h-3 ml-1"></i>
+                            </a>
+                        ` : ''}
                     </div>
                 </div>
             `}).join('') : `<div class="text-center text-gray-500 py-10">此分類暫無活動</div>`;
@@ -901,7 +1043,8 @@
         function renderMeetings() {
             const list = APP_DATA.meetings.length ? APP_DATA.meetings.map(m => `
                 <div class="flex items-center justify-between bg-white dark:bg-gray-800 p-4 rounded-lg shadow hover:bg-gray-50 dark:hover:bg-gray-700 transition cursor-pointer border-l-4 border-gray-400">
-                    <div class="flex items-center gap-4"><div class="bg-gray-100 dark:bg-gray-600 p-3 rounded text-gray-500 dark:text-gray-300"><i data-lucide="file-text"></i></div><div><h3 class="font-bold dark:text-white">${isEn() ? m.title_en : m.title_zh}</h3><p class="text-sm text-gray-500">${m.date}</p></div></div><button class="text-theme hover:underline text-sm font-bold">PDF</button>
+                    <div class="flex items-center gap-4"><div class="bg-gray-100 dark:bg-gray-600 p-3 rounded text-gray-500 dark:text-gray-300"><i data-lucide="file-text"></i></div><div><h3 class="font-bold dark:text-white">${isEn() ? m.title_en : m.title_zh}</h3><p class="text-sm text-gray-500">${m.date}</p></div></div>
+                    <a href="${m.file}" target="_blank" class="text-theme hover:underline text-sm font-bold">PDF</a>
                 </div>
             `).join('') : `<p class="text-center text-gray-500">暫無公開的會議記錄。</p>`;
             return `<h1 class="text-3xl font-bold mb-6 text-theme text-center">${t('meetingTitle')}</h1><div class="space-y-4 max-w-3xl mx-auto">${list}</div>`;
@@ -974,6 +1117,7 @@
                                     <input id="event-time" class="w-1/2 p-2 rounded dark:bg-gray-800 dark:text-white" placeholder="時間 (e.g. 08:00)">
                                 </div>
                                 <input id="event-loc" class="w-full mb-2 p-2 rounded dark:bg-gray-800 dark:text-white" placeholder="地點">
+                                <input id="event-link" class="w-full mb-2 p-2 rounded dark:bg-gray-800 dark:text-white" placeholder="報名連結/資訊網址 (選填)">
                                 <select id="event-type" class="w-full mb-2 p-2 rounded dark:bg-gray-800 dark:text-white">
                                     <option value="Activity">Activity (活動)</option>
                                     <option value="Academic">Academic (教務)</option>
@@ -988,36 +1132,120 @@
                         </div>
                     `;
                 }
-                // Tab Content: Confessions
+                // Tab Content: Confessions (Moderation)
                 else if (tab === 'confessions') {
-                     const list = APP_DATA.confessionWall.filter(c => c.id && !c.id.startsWith('s')).map(c => `
-                         <div class="border-b dark:border-gray-700 p-3 flex justify-between items-start">
-                            <div>
-                                <p class="text-sm dark:text-white font-bold">${c.content}</p>
-                                <p class="text-xs text-gray-500 mt-1">By: ${c.author}</p>
-                            </div>
-                            <button onclick="deleteItem('confessions', '${c.id}')" class="text-red-500 text-xs border border-red-200 p-1 rounded hover:bg-red-50">${t('delete_btn')}</button>
-                         </div>
-                    `).join('');
+                    // Trigger loading pending on render
+                    setTimeout(loadPendingConfessions, 100);
+
                     contentHtml = `
                         <div class="bg-white dark:bg-gray-800 p-4 rounded-lg shadow">
-                            <h3 class="font-bold mb-4 dark:text-white">最新告白管理</h3>
-                            <div class="max-h-[500px] overflow-y-auto">
-                             ${list || `<p class="text-center py-10 text-gray-500">${t('no_data')}</p>`}
+                            <div class="flex justify-between items-center mb-4">
+                                <h3 class="font-bold dark:text-white">告白牆審核 (待審核列表)</h3>
+                                <button onclick="loadPendingConfessions()" class="text-sm bg-blue-100 text-blue-600 px-3 py-1 rounded hover:bg-blue-200">重新整理</button>
+                            </div>
+                            <div id="admin-pending-list" class="max-h-[500px] overflow-y-auto">
+                                <p class="text-center py-10 text-gray-500">載入中...</p>
+                            </div>
+                        </div>
+                    `;
+                }
+                // Tab Content: Finance
+                else if (tab === 'finance') {
+                    const list = APP_DATA.finance.map(f => `
+                        <div class="flex justify-between items-center bg-gray-50 dark:bg-gray-700 p-3 rounded mb-2">
+                            <div><p class="font-bold dark:text-white">${f.item_zh}</p><span class="text-xs text-gray-500">${f.date} | ${f.amount}</span></div>
+                            <button onclick="deleteItem('finance', '${f.id}')" class="text-red-500 text-sm">刪除</button>
+                        </div>
+                    `).join('');
+                    contentHtml = `
+                        <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                            <div class="bg-gray-100 dark:bg-gray-700 p-4 rounded-lg">
+                                <h3 class="font-bold mb-2 dark:text-white">新增收支</h3>
+                                <input id="fin-date" type="date" class="w-full mb-2 p-2 rounded dark:bg-gray-800 dark:text-white">
+                                <input id="fin-item" class="w-full mb-2 p-2 rounded dark:bg-gray-800 dark:text-white" placeholder="項目名稱">
+                                <div class="flex gap-2 mb-2">
+                                    <input id="fin-amount" type="number" class="w-2/3 p-2 rounded dark:bg-gray-800 dark:text-white" placeholder="金額">
+                                    <select id="fin-type" class="w-1/3 p-2 rounded dark:bg-gray-800 dark:text-white">
+                                        <option value="In">收入 (+)</option>
+                                        <option value="Out">支出 (-)</option>
+                                    </select>
+                                </div>
+                                <button onclick="addFinance()" class="bg-theme text-white px-4 py-2 rounded w-full">新增</button>
+                            </div>
+                            <div class="bg-white dark:bg-gray-800 p-4 rounded-lg shadow h-[400px] overflow-y-auto">
+                                <h3 class="font-bold mb-2 dark:text-white">收支列表</h3>
+                                ${list}
+                            </div>
+                        </div>
+                    `;
+                }
+                // Tab Content: Meetings
+                else if (tab === 'meetings') {
+                     const list = APP_DATA.meetings.map(m => `
+                        <div class="flex justify-between items-center bg-gray-50 dark:bg-gray-700 p-3 rounded mb-2">
+                            <div><p class="font-bold dark:text-white">${m.title_zh}</p><span class="text-xs text-gray-500">${m.date}</span></div>
+                            <button onclick="deleteItem('meetings', '${m.id}')" class="text-red-500 text-sm">刪除</button>
+                        </div>
+                    `).join('');
+                    contentHtml = `
+                        <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                            <div class="bg-gray-100 dark:bg-gray-700 p-4 rounded-lg">
+                                <h3 class="font-bold mb-2 dark:text-white">上傳會議記錄</h3>
+                                <input id="mt-date" type="date" class="w-full mb-2 p-2 rounded dark:bg-gray-800 dark:text-white">
+                                <input id="mt-title" class="w-full mb-2 p-2 rounded dark:bg-gray-800 dark:text-white" placeholder="標題">
+                                <input id="mt-link" class="w-full mb-2 p-2 rounded dark:bg-gray-800 dark:text-white" placeholder="PDF 檔案連結 (Google Drive)">
+                                <button onclick="addMeeting()" class="bg-theme text-white px-4 py-2 rounded w-full">發布</button>
+                            </div>
+                            <div class="bg-white dark:bg-gray-800 p-4 rounded-lg shadow h-[400px] overflow-y-auto">
+                                <h3 class="font-bold mb-2 dark:text-white">已發布記錄</h3>
+                                ${list}
+                            </div>
+                        </div>
+                    `;
+                }
+                // Tab Content: Downloads
+                else if (tab === 'downloads') {
+                     const list = APP_DATA.downloads.map(d => `
+                        <div class="flex justify-between items-center bg-gray-50 dark:bg-gray-700 p-3 rounded mb-2">
+                            <div><p class="font-bold dark:text-white">${d.title_zh}</p><span class="text-xs text-gray-500">${d.type}</span></div>
+                            <button onclick="deleteItem('downloads', '${d.id}')" class="text-red-500 text-sm">刪除</button>
+                        </div>
+                    `).join('');
+                    contentHtml = `
+                        <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                            <div class="bg-gray-100 dark:bg-gray-700 p-4 rounded-lg">
+                                <h3 class="font-bold mb-2 dark:text-white">新增下載資源</h3>
+                                <input id="dl-date" type="date" class="w-full mb-2 p-2 rounded dark:bg-gray-800 dark:text-white">
+                                <input id="dl-title" class="w-full mb-2 p-2 rounded dark:bg-gray-800 dark:text-white" placeholder="標題">
+                                <input id="dl-link" class="w-full mb-2 p-2 rounded dark:bg-gray-800 dark:text-white" placeholder="檔案連結">
+                                <select id="dl-type" class="w-full mb-2 p-2 rounded dark:bg-gray-800 dark:text-white">
+                                    <option value="Event">Event (活動)</option>
+                                    <option value="Academic">Academic (教務)</option>
+                                    <option value="Other">Other (其他)</option>
+                                </select>
+                                <button onclick="addDownload()" class="bg-theme text-white px-4 py-2 rounded w-full">發布</button>
+                            </div>
+                            <div class="bg-white dark:bg-gray-800 p-4 rounded-lg shadow h-[400px] overflow-y-auto">
+                                <h3 class="font-bold mb-2 dark:text-white">資源列表</h3>
+                                ${list}
                             </div>
                         </div>
                     `;
                 }
                 // Tab Content: System Settings
                 else if (tab === 'system') {
+                    let marqueeVal = '';
+                    if(Array.isArray(SYSTEM_SETTINGS.marquee)) marqueeVal = SYSTEM_SETTINGS.marquee.join(' | ');
+                    else marqueeVal = SYSTEM_SETTINGS.marquee;
+
                     contentHtml = `
                         <div class="bg-white dark:bg-gray-800 p-6 rounded-lg shadow">
                             <h3 class="font-bold mb-4 dark:text-white text-lg">系統全域設定</h3>
                             
                             <div class="mb-6">
                                 <label class="block font-bold mb-2 dark:text-gray-300">首頁跑馬燈內容</label>
-                                <textarea id="system-marquee" rows="3" class="w-full p-3 rounded border dark:bg-gray-700 dark:border-gray-600 dark:text-white focus:ring-2 focus:ring-theme outline-none">${SYSTEM_SETTINGS.marquee}</textarea>
-                                <p class="text-xs text-gray-500 mt-1">更新後所有使用者重新整理頁面即可看到變更。</p>
+                                <textarea id="system-marquee" rows="3" class="w-full p-3 rounded border dark:bg-gray-700 dark:border-gray-600 dark:text-white focus:ring-2 focus:ring-theme outline-none" placeholder="輸入文字... 若要分段顯示，請使用 | 符號分隔 (例如: 第一段 | 第二段)">${marqueeVal}</textarea>
+                                <p class="text-xs text-gray-500 mt-1">提示：使用 " | " 符號來分隔多段跑馬燈訊息。</p>
                             </div>
 
                             <button onclick="saveSystemSettings()" class="bg-theme text-white px-6 py-2 rounded font-bold hover:bg-theme-dark transition">${t('save_btn')}</button>
@@ -1035,6 +1263,9 @@
                             <button onclick="switchAdminTab('news')" class="text-left px-4 py-2 rounded hover:bg-gray-200 dark:hover:bg-gray-800 ${tab==='news'?'bg-white dark:bg-gray-800 shadow font-bold text-theme':''}">${t('admin_news')}</button>
                             <button onclick="switchAdminTab('events')" class="text-left px-4 py-2 rounded hover:bg-gray-200 dark:hover:bg-gray-800 ${tab==='events'?'bg-white dark:bg-gray-800 shadow font-bold text-theme':''}">${t('admin_events')}</button>
                             <button onclick="switchAdminTab('confessions')" class="text-left px-4 py-2 rounded hover:bg-gray-200 dark:hover:bg-gray-800 ${tab==='confessions'?'bg-white dark:bg-gray-800 shadow font-bold text-theme':''}">${t('admin_confess')}</button>
+                            <button onclick="switchAdminTab('finance')" class="text-left px-4 py-2 rounded hover:bg-gray-200 dark:hover:bg-gray-800 ${tab==='finance'?'bg-white dark:bg-gray-800 shadow font-bold text-theme':''}">${t('admin_finance')}</button>
+                            <button onclick="switchAdminTab('meetings')" class="text-left px-4 py-2 rounded hover:bg-gray-200 dark:hover:bg-gray-800 ${tab==='meetings'?'bg-white dark:bg-gray-800 shadow font-bold text-theme':''}">${t('admin_meetings')}</button>
+                            <button onclick="switchAdminTab('downloads')" class="text-left px-4 py-2 rounded hover:bg-gray-200 dark:hover:bg-gray-800 ${tab==='downloads'?'bg-white dark:bg-gray-800 shadow font-bold text-theme':''}">${t('admin_downloads')}</button>
                             <button onclick="switchAdminTab('system')" class="text-left px-4 py-2 rounded hover:bg-gray-200 dark:hover:bg-gray-800 ${tab==='system'?'bg-white dark:bg-gray-800 shadow font-bold text-theme':''}">${t('admin_system')}</button>
                             <div class="mt-auto">
                                 <button onclick="handleLogout()" class="w-full text-left px-4 py-2 rounded text-red-500 hover:bg-red-50 dark:hover:bg-red-900/20">${t('admin_logout')}</button>
